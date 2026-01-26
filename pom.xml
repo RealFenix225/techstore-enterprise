@@ -20,6 +20,8 @@
         <java.version>17</java.version>
         <lombok.version>1.18.30</lombok.version>
         <oracle.version>21.9.0.0</oracle.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     </properties>
 
     <dependencies>
@@ -77,6 +79,11 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.2.5</version> </dependency>
     </dependencies>
 
     <build>

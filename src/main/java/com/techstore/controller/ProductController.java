@@ -1,5 +1,6 @@
 package com.techstore.controller;
 
+import com.techstore.service.ProductImportService;
 import com.techstore.dto.ProductDto;
 import com.techstore.service.ProductService;
 import jakarta.validation.Valid;
@@ -9,6 +10,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
@@ -19,6 +21,7 @@ import java.net.URI;
 public class ProductController {
 
     private final ProductService productService;
+    private final ProductImportService productImportService;
 
     // 1. OBTENER TODOS (Paginado)
     // GET /api/products?page=0&size=10
@@ -76,5 +79,16 @@ public class ProductController {
     public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
         productService.deleteProduct(id);
         return ResponseEntity.noContent().build(); // Retorna 204 No Content
+    }
+
+    //7. IMPORTAR PRODUCTOS
+    // POST /api/products/upload
+    //Consumes = multipart/form-data
+    @PostMapping(value = "/upload", consumes = {"multipart/form-data"})
+    public ResponseEntity<String> uploadProducts(@RequestParam("file") MultipartFile file) {
+
+        productImportService.importProducts(file);
+
+        return ResponseEntity.ok("File uploaded");
     }
 }

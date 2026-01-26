@@ -1,7 +1,7 @@
 package com.techstore.service;
 
-import com.techstore.exception.ResourceNotFoundException;
 import com.techstore.dto.ProductDto;
+import com.techstore.exception.ResourceNotFoundException;
 import com.techstore.mapper.ProductMapper;
 import com.techstore.model.Category;
 import com.techstore.model.Product;
@@ -15,13 +15,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
-
 @Service
-@RequiredArgsConstructor
+@RequiredArgsConstructor // Constructor Injection automática
 public class ProductService {
 
     private final ProductRepository productRepository;
@@ -32,128 +27,92 @@ public class ProductService {
     // --- LECTURA (READ) ---
 
     @Transactional(readOnly = true)
-    public Page<ProductDto> getAllProducts(Pageable pageable){
-        Page<Product> productsPage = productRepository.findAll(pageable);
-        return productsPage.map(productMapper::toDto);
+    public Page<ProductDto> getAllProducts(Pageable pageable) {
+        // El EntityGraph en el repositorio ya optimiza esto
+        return productRepository.findAll(pageable)
+                .map(productMapper::toDto);
     }
 
     @Transactional(readOnly = true)
-    public Page<ProductDto> searchProducts(String name, Pageable pageable) {
-        Page<Product> products = productRepository.findByNameContainingIgnoreCase(name, pageable);
-        return products.map(productMapper::toDto);
-    }
-
-    public List<ProductDto> getAllProducts() {
-        return productRepository.findAll()
-                .stream()
-                .map(productMapper::toDto)
-                .collect(Collectors.toList());
-    }
-
     public ProductDto getProductById(Long id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "id", id));
         return productMapper.toDto(product);
     }
 
+    @Transactional(readOnly = true)
+    public Page<ProductDto> searchProducts(String query, Pageable pageable) {
+        return productRepository.findByNameContainingIgnoreCase(query, pageable)
+                .map(productMapper::toDto);
+    }
+
     // --- ESCRITURA (CREATE) ---
 
     @Transactional
     public ProductDto createProduct(ProductDto productDto) {
-        // 1. Convertir a Entidad (Mapea nombre, precio, stock...)
+        // 1. Validar existencias de relaciones
+        Category category = getCategoryOrThrow(productDto.getCategoryId());
+        Provider provider = getProviderOrThrow(productDto.getProviderId());
+
+        // 2. Mappear y asignar
         Product product = productMapper.toEntity(productDto);
-
-        // 2. BUSCAR RELACIONES REALES (Adiós a la trampa)
-        // Ahora buscamos EXACTAMENTE el ID que usted pidió.
-
-        Category category = categoryRepository.findById(productDto.getCategoryId())
-                .orElseThrow(() -> new ResourceNotFoundException("Category", "id", productDto.getCategoryId()));
-
-        Provider provider = providerRepository.findById(productDto.getProviderId())
-                .orElseThrow(() -> new ResourceNotFoundException("Provider", "id", productDto.getProviderId()));
-
-        // 3. Asignar las relaciones
         product.setCategory(category);
         product.setProvider(provider);
 
-        // 4. Guardar
-        Product savedProduct = productRepository.save(product);
-
-        // 5. Retornar
-        return productMapper.toDto(savedProduct);
-    }
-
-    @Transactional
-    public List<ProductDto> bulkInsertProducts(List<ProductDto> productDtos) {
-        if (productDtos == null || productDtos.isEmpty()) {
-            throw new IllegalArgumentException("Product list for bulk insert cannot be empty");
-        }
-
-        List<Product> products = new ArrayList<>();
-
-        for (ProductDto dto : productDtos) {
-            Product product = Product.builder()
-                    .name(dto.getName())
-                    .description(dto.getDescription())
-                    .price(dto.getPrice())
-                    .stock(dto.getStock())
-                    // Asignación segura de padres
-                    .category(categoryRepository.findAll().stream().findFirst().orElse(null))
-                    .provider(providerRepository.findAll().stream().findFirst().orElse(null))
-                    .build();
-
-            products.add(product);
-        }
-
-        List<Product> savedProducts = productRepository.saveAll(products);
-
-        return savedProducts.stream()
-                .map(productMapper::toDto)
-                .collect(Collectors.toList());
+        // 3. Guardar
+        return productMapper.toDto(productRepository.save(product));
     }
 
     // --- ACTUALIZACIÓN (UPDATE) ---
 
-    // Este es el método que tenías roto. Lo he limpiado para que solo actualice PRECIO (PATCH)
-    @Transactional
-    public void updateProductPrice(Long id, BigDecimal newPrice){
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Product", "id", id));
-
-        // Solo actualizamos el precio, nada más
-        product.setPrice(newPrice);
-        productRepository.save(product);
-    }
-
-    // ESTE ES EL NUEVO: Actualización completa (PUT)
     @Transactional
     public ProductDto updateProduct(Long id, ProductDto productDto) {
-        // 1. Verificar existencia
+        // 1. Recuperar producto existente
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "id", id));
 
-        // 2. Actualizar campos (Menos ID y Fechas)
+        // 2. Actualizar campos simples
         product.setName(productDto.getName());
         product.setDescription(productDto.getDescription());
         product.setPrice(productDto.getPrice());
         product.setStock(productDto.getStock());
 
-        // Nota: Por ahora no cambiamos la categoría ni el proveedor en el Update
+        // 3. Actualizar Relaciones (Si cambiaron)
+        // Solo buscamos en BD si el ID que viene es diferente al que ya tiene el producto
+        if (!product.getCategory().getId().equals(productDto.getCategoryId())) {
+            Category newCategory = getCategoryOrThrow(productDto.getCategoryId());
+            product.setCategory(newCategory);
+        }
 
-        // 3. Guardar y retornar
-        Product updatedProduct = productRepository.save(product);
-        return productMapper.toDto(updatedProduct);
+        if (product.getProvider() == null || !product.getProvider().getId().equals(productDto.getProviderId())) {
+            Provider newProvider = getProviderOrThrow(productDto.getProviderId());
+            product.setProvider(newProvider);
+        }
+
+        // 4. Guardar (Hibernate detecta cambios automáticamente por ser Transactional, pero el save es explícito)
+        return productMapper.toDto(productRepository.save(product));
     }
 
     // --- ELIMINACIÓN (DELETE) ---
 
     @Transactional
     public void deleteProduct(Long id) {
-        // 1. Verificar antes de borrar
         if (!productRepository.existsById(id)) {
             throw new ResourceNotFoundException("Product", "id", id);
         }
-        // 2. Ejecutar borrado
         productRepository.deleteById(id);
+    }
+
+    // --- MÉTODOS AUXILIARES PRIVADOS (CLEAN CODE) ---
+    // Extraemos la lógica de búsqueda para no repetir código y cumplir DRY (Don't Repeat Yourself)
+
+    private Category getCategoryOrThrow(Long id) {
+        return categoryRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Category", "id", id));
+    }
+
+    private Provider getProviderOrThrow(Long id) {
+        return providerRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Provider", "id", id));
     }
 }
