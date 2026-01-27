@@ -1,81 +1,101 @@
 package com.techstore.service;
 
-import lombok.extern.slf4j.Slf4j;
-import org.apache.poi.ss.usermodel.*; // Interfaz genérica (sirve para xls y xlsx)
-import org.apache.poi.xssf.usermodel.XSSFWorkbook; // Implementación específica para .xlsx
+import com.techstore.model.Category;
+import com.techstore.model.Product;
+import com.techstore.model.Provider;
+import com.techstore.repository.CategoryRepository;
+import com.techstore.repository.ProductRepository;
+import com.techstore.repository.ProviderRepository;
+import lombok.RequiredArgsConstructor;
+import org.apache.poi.ss.usermodel.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.util.Objects;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
-@Slf4j // Usaremos Logs en lugar de System.out (Estándar Enterprise)
+@RequiredArgsConstructor
 public class ProductImportService {
 
-    private static final String EXCEL_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    private final ProductRepository productRepo;
+    private final CategoryRepository categoryRepo;
+    private final ProviderRepository providerRepo;
 
-    public void importProducts(MultipartFile file) {
-        // 1. Validaciones previas (Ya las tenías)
-        if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("El archivo importado no puede estar vacío.");
-        }
-        if (!Objects.equals(file.getContentType(), EXCEL_TYPE)) {
-            throw new IllegalArgumentException("Formato inválido. Use Excel (.xlsx).");
-        }
+    @Transactional
+    public void importProducts(MultipartFile file) throws IOException {
+        System.out.println("--- INICIO DE IMPORTACIÓN ---");
+        System.out.println("Archivo recibido: " + file.getOriginalFilename());
+        System.out.println("Tamaño: " + file.getSize() + " bytes");
 
-        // 2. PROCESAMIENTO CON APACHE POI
-        try (InputStream inputStream = file.getInputStream()) {
-            // "Try with resources" asegura que el InputStream se cierre solo al terminar.
+        // 1. Cargar Maestros (Asumimos ID 1 existe, si no, fallará visiblemente)
+        Category defaultCategory = categoryRepo.findById(1L)
+                .orElseThrow(() -> new RuntimeException("¡ERROR CRÍTICO! No existe la Categoría ID 1 en BBDD"));
+        Provider defaultProvider = providerRepo.findById(1L)
+                .orElseThrow(() -> new RuntimeException("¡ERROR CRÍTICO! No existe el Proveedor ID 1 en BBDD"));
 
-            // A. CREAR EL LIBRO (WORKBOOK)
-            // Le pasamos el chorro de bytes para que reconstruya el Excel en memoria.
-            Workbook workbook = new XSSFWorkbook(inputStream);
+        List<Product> productsToSave = new ArrayList<>();
+        DataFormatter dataFormatter = new DataFormatter(); // Para leer números como texto
 
-            // B. OBTENER LA HOJA (SHEET)
-            // Normalmente la data está en la primera pestaña (índice 0).
+        try (Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
             Sheet sheet = workbook.getSheetAt(0);
-
-            log.info("Iniciando lectura de hoja: {}", sheet.getSheetName());
-
-            // C. ITERAR FILAS (ROWS)
-            // Usamos un DataFormatter para leer cualquier tipo de dato como String seguro.
-            DataFormatter dataFormatter = new DataFormatter();
+            System.out.println("Leyendo hoja: " + sheet.getSheetName());
+            System.out.println("Total de filas estimadas: " + sheet.getPhysicalNumberOfRows());
 
             for (Row row : sheet) {
-                // SALTAMOS EL ENCABEZADO
+                // Saltar cabecera (Fila 0)
                 if (row.getRowNum() == 0) {
-                    continue; // Si es la fila 0, pasa a la siguiente vuelta del bucle.
-                }
-
-                // D. LEER CELDAS (CELLS)
-                // Imaginemos que tu Excel tiene: Nombre (0), Descripción (1), Precio (2), Stock (3)
-
-                // Leemos las celdas usando el índice de columna (0, 1, 2...)
-                String name = dataFormatter.formatCellValue(row.getCell(0));
-                String description = dataFormatter.formatCellValue(row.getCell(1));
-                String priceStr = dataFormatter.formatCellValue(row.getCell(2));
-                String stockStr = dataFormatter.formatCellValue(row.getCell(3));
-
-                // VALIDACIÓN BÁSICA: Si no hay nombre, saltamos la fila (puede ser una fila vacía al final)
-                if (name == null || name.isBlank()) {
+                    System.out.println("Saltando cabecera...");
                     continue;
                 }
 
-                // IMPRIMIR EN CONSOLA (SIMULACRO)
-                log.info("Fila {}: Producto='{}', Precio='{}', Stock='{}'",
-                        row.getRowNum(), name, priceStr, stockStr);
+                // Leer celdas (Mapeo estricto del Excel de 50 items)
+                // A=Name, B=Desc, C=Price, D=Stock, E=CatId, F=ProvId
+                String name = dataFormatter.formatCellValue(row.getCell(0));
+                String priceStr = dataFormatter.formatCellValue(row.getCell(2));
 
-                // NOTA: Mañana aquí convertiremos estos Strings a ProductDto y guardaremos en BD.
+                // Depuración de fila
+                // System.out.println("Fila " + row.getRowNum() + " leída. Nombre: [" + name + "]");
+
+                if (name == null || name.trim().isEmpty()) {
+                    System.out.println(">>> Fila " + row.getRowNum() + " IGNORADA: Nombre vacío");
+                    continue;
+                }
+
+                try {
+                    BigDecimal price = new BigDecimal(priceStr.replace(",", ".")); // Asegurar formato decimal
+                    // int stock = Integer.parseInt(dataFormatter.formatCellValue(row.getCell(3)));
+                    // Simplificamos stock a 10 para probar si falla el parseo
+                    int stock = 10;
+
+                    Product product = Product.builder()
+                            .name(name)
+                            .description(dataFormatter.formatCellValue(row.getCell(1)))
+                            .price(price)
+                            .stock(stock)
+                            .category(defaultCategory)
+                            .provider(defaultProvider)
+                            .build();
+
+                    productsToSave.add(product);
+                } catch (Exception e) {
+                    System.out.println(">>> ERROR en Fila " + row.getRowNum() + ": " + e.getMessage());
+                    // e.printStackTrace(); // Descomenta si necesitas más detalle
+                }
             }
+        }
 
-            // Cerramos el workbook para liberar memoria (muy importante)
-            workbook.close();
+        System.out.println("--- RESUMEN ---");
+        System.out.println("Productos detectados válidos: " + productsToSave.size());
 
-        } catch (IOException e) {
-            log.error("Error crítico leyendo el archivo Excel", e);
-            throw new RuntimeException("Error al procesar el archivo: " + e.getMessage());
+        if (!productsToSave.isEmpty()) {
+            productRepo.saveAll(productsToSave);
+            System.out.println("¡GUARDADO EXITOSO EN BASE DE DATOS!");
+        } else {
+            System.out.println("¡ALERTA! La lista a guardar está VACÍA.");
         }
     }
 }

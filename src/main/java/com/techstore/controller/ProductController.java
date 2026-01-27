@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.io.IOException;
 import java.net.URI;
 
 @RestController
@@ -85,7 +86,7 @@ public class ProductController {
     // POST /api/products/upload
     //Consumes = multipart/form-data
     @PostMapping(value = "/upload", consumes = {"multipart/form-data"})
-    public ResponseEntity<String> uploadProducts(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<String> uploadProducts(@RequestParam("file") MultipartFile file) throws IOException {
 
         productImportService.importProducts(file);
 
