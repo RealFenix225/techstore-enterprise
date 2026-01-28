@@ -1,4 +1,7 @@
-### DISPARO FINAL (AHORA SÍ)
+GET http://localhost:8080/api/products/search/quick?term=wireless
+
+GET http://localhost:8080/api/products/search/quick?term=gaming
+
 POST http://localhost:8080/api/products/upload
 Content-Type: multipart/form-data; boundary=WebAppBoundary
 

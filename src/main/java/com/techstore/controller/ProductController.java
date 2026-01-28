@@ -14,7 +14,9 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.net.URI;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/products")
@@ -91,5 +93,24 @@ public class ProductController {
         productImportService.importProducts(file);
 
         return ResponseEntity.ok("File uploaded");
+    }
+
+    // 1. GET /api/products/search/low-stock?limit=10
+    @GetMapping("/search/low-stock")
+    public ResponseEntity<List<ProductDto>> getLowStock(@RequestParam Integer limit) {
+        return ResponseEntity.ok(productService.getProductsLowStock(limit));
+    }
+
+    // 2. GET /api/products/search/expensive?min=1000
+    @GetMapping("/search/expensive")
+    public ResponseEntity<List<ProductDto>> getExpensiveProducts(@RequestParam BigDecimal min) {
+        return ResponseEntity.ok(productService.getProductsByMinPrice(min));
+    }
+
+    // 3. GET /api/products/search?term=gamer
+    @GetMapping("/search/quick")
+    public ResponseEntity<List<ProductDto>> search(@RequestParam String term) {
+        // Fíjate que ahora llamamos a searchProductsByTerm
+        return ResponseEntity.ok(productService.searchProductsByTerm(term));
     }
 }

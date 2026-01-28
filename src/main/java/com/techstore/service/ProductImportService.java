@@ -31,14 +31,14 @@ public class ProductImportService {
         System.out.println("Archivo recibido: " + file.getOriginalFilename());
         System.out.println("Tamaño: " + file.getSize() + " bytes");
 
-        // 1. Cargar Maestros (Asumimos ID 1 existe, si no, fallará visiblemente)
+        // 1. Cargar Maestros
         Category defaultCategory = categoryRepo.findById(1L)
                 .orElseThrow(() -> new RuntimeException("¡ERROR CRÍTICO! No existe la Categoría ID 1 en BBDD"));
         Provider defaultProvider = providerRepo.findById(1L)
                 .orElseThrow(() -> new RuntimeException("¡ERROR CRÍTICO! No existe el Proveedor ID 1 en BBDD"));
 
         List<Product> productsToSave = new ArrayList<>();
-        DataFormatter dataFormatter = new DataFormatter(); // Para leer números como texto
+        DataFormatter dataFormatter = new DataFormatter();
 
         try (Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
             Sheet sheet = workbook.getSheetAt(0);
@@ -46,14 +46,13 @@ public class ProductImportService {
             System.out.println("Total de filas estimadas: " + sheet.getPhysicalNumberOfRows());
 
             for (Row row : sheet) {
-                // Saltar cabecera (Fila 0)
+                // Esto se salta la cabecera
                 if (row.getRowNum() == 0) {
                     System.out.println("Saltando cabecera...");
                     continue;
                 }
 
-                // Leer celdas (Mapeo estricto del Excel de 50 items)
-                // A=Name, B=Desc, C=Price, D=Stock, E=CatId, F=ProvId
+
                 String name = dataFormatter.formatCellValue(row.getCell(0));
                 String priceStr = dataFormatter.formatCellValue(row.getCell(2));
 
@@ -66,9 +65,8 @@ public class ProductImportService {
                 }
 
                 try {
-                    BigDecimal price = new BigDecimal(priceStr.replace(",", ".")); // Asegurar formato decimal
+                    BigDecimal price = new BigDecimal(priceStr.replace(",", ".")); // Esto asegura el formato decimal
                     // int stock = Integer.parseInt(dataFormatter.formatCellValue(row.getCell(3)));
-                    // Simplificamos stock a 10 para probar si falla el parseo
                     int stock = 10;
 
                     Product product = Product.builder()
@@ -83,7 +81,7 @@ public class ProductImportService {
                     productsToSave.add(product);
                 } catch (Exception e) {
                     System.out.println(">>> ERROR en Fila " + row.getRowNum() + ": " + e.getMessage());
-                    // e.printStackTrace(); // Descomenta si necesitas más detalle
+                    e.printStackTrace();
                 }
             }
         }
