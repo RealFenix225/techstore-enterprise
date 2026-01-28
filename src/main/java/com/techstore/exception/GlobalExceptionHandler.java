@@ -1,73 +1,77 @@
 package com.techstore.exception;
 
-import com.techstore.dto.ErrorDto;
+import com.techstore.dto.ApiError;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.context.request.WebRequest;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
+import java.util.stream.Collectors;
 
-@RestControllerAdvice //Este es el vigía total
+@RestControllerAdvice
 public class GlobalExceptionHandler {
-    //Esto manera recursos no encontrados (404)
-    @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ErrorDto> handleResourceNotFoundException(
-            ResourceNotFoundException exception,
-            WebRequest webRequest
-    ) {
-        ErrorDto errorDto = ErrorDto.builder()
-                .timestamp(LocalDateTime.now())
-                .message(exception.getMessage())
-                .details(webRequest.getDescription(false)) //false para no inicializar headers sensibles
-                .code(HttpStatus.NOT_FOUND.value())
-                .build();
-        return new ResponseEntity<>(errorDto, HttpStatus.NOT_FOUND);
-    }
 
-    //Esto maneja cualquier otro error no esperado (500)
-    //Esto eevita que el usuario vea "NullPointerException" o cosas raras.
+    // 1. Handle Generic Exceptions (Fallback - Error 500)
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorDto> handGlobalException(
+    public ResponseEntity<ApiError> handleGlobalException(
             Exception exception,
-            WebRequest webRequest
+            HttpServletRequest request
     ) {
-        ErrorDto errorDto = ErrorDto.builder()
+        ApiError apiError = ApiError.builder()
                 .timestamp(LocalDateTime.now())
-                .message("Internal Server Error: Ocurrió un error inesperado.")
-                .details(exception.getMessage()) //En prod, a veces ocultamos esto
-                .code(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .error(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase())
+                .message("Unexpected internal error") // Generic message for security
+                .path(request.getRequestURI())
                 .build();
-        return new ResponseEntity<>(errorDto, HttpStatus.INTERNAL_SERVER_ERROR);
+
+        return new ResponseEntity<>(apiError, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    //Manejar errores de validación (400)
-    //Este método extrae cada campo que falló y su mensaje
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Object> handleValidationExceptions(
-            MethodArgumentNotValidException ex,
-            WebRequest webRequest
+    // 2. Handle Resource Not Found (Error 404)
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ApiError> handleResourceNotFoundException(
+            ResourceNotFoundException exception,
+            HttpServletRequest request
     ) {
-        Map<String, String> errors = new HashMap();
+        // Tu clase ya formatea el mensaje en el constructor, así que usamos exception.getMessage()
+        ApiError apiError = ApiError.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.NOT_FOUND.value())
+                .error(HttpStatus.NOT_FOUND.getReasonPhrase())
+                .message(exception.getMessage())
+                .path(request.getRequestURI())
+                .build();
 
-        //Iteramos sobre todos los errores que encontró Spring
-        ex.getBindingResult().getAllErrors().forEach((error) -> {
-            String fieldName = ((org.springframework.validation.FieldError) error).getField();
-            String errorMessage = error.getDefaultMessage();
-            errors.put(fieldName, errorMessage);
-        });
+        return new ResponseEntity<>(apiError, HttpStatus.NOT_FOUND);
+    }
 
-        //Creamos una respuesta personalizada (podríamos reusar ErrorDto, pero un Map es más claro aquí para múltiples campos)
-        Map<String, Object> response = new HashMap();
-        response.put("timestamp", LocalDateTime.now());
-        response.put("code", HttpStatus.BAD_REQUEST.value());
-        response.put("message", "Error de validación en los datos de entrada");
-        response.put("errors", errors); //Aquí va la lista de campos malos
+    // 3. Handle Validation Errors (Error 400 - @Valid)
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiError> handleValidationExceptions(
+            MethodArgumentNotValidException exception,
+            HttpServletRequest request
+    ) {
+        // Extraemos los errores de cada campo en una lista limpia
+        List<String> validationErrors = exception.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .map(fieldError -> fieldError.getField() + ": " + fieldError.getDefaultMessage())
+                .collect(Collectors.toList());
 
-        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        ApiError apiError = ApiError.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                .message("Validation failed for one or more arguments")
+                .path(request.getRequestURI())
+                .details(validationErrors) // Aquí va la lista detallada
+                .build();
+
+        return new ResponseEntity<>(apiError, HttpStatus.BAD_REQUEST);
     }
 }

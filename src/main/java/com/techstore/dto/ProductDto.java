@@ -1,10 +1,6 @@
 package com.techstore.dto;
 
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,28 +14,36 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ProductDto {
+
     private Long id;
 
-    @NotBlank(message = "Product name cannot be empty.")
-    @Size(min = 3, max = 100, message = "Name must be between 3 and 100 character")
+    @NotBlank(message = "Product name is required")
+    @Size(min = 3, max = 100, message = "Product name must be between 3 and 100 characters")
+    // Pattern: Only letters, numbers, spaces, and hyphens allowed to prevent XSS or weird inputs
+    @Pattern(regexp = "^[a-zA-Z0-9\\s\\-]+$", message = "Product name contains invalid characters")
     private String name;
 
-    @Size(max = 255, message = "Description is longer.")
+    @Size(max = 255, message = "Description cannot exceed 255 characters")
     private String description;
 
-    @NotNull(message="The price is mandatory")
-    @Positive(message ="The price must be greater than zero. ")
+    @NotNull(message = "Price is required")
+    @Positive(message = "Price must be greater than zero")
+    @Digits(integer = 10, fraction = 2, message = "Price format is invalid (expected format: X.XX)")
     private BigDecimal price;
 
-    @Min(value = 0, message = "The stock cannot be negative.")
+    @NotNull(message = "Stock is required")
+    @Min(value = 0, message = "Stock cannot be negative")
     private Integer stock;
+
     private String categoryName;
     private String providerName;
 
     @NotNull(message = "Category ID is required")
+    @Positive(message = "Category ID must be a positive number")
     private Long categoryId;
 
-    @NotNull(message = "Provider IS is required")
+    @NotNull(message = "Provider ID is required")
+    @Positive(message = "Provider ID must be a positive number")
     private Long providerId;
 
     private LocalDateTime createdAt;
