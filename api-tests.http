@@ -1,0 +1,17 @@
+### ==========================================
+### DÍA 3: PRUEBAS DE LÓGICA DE NEGOCIO
+### ==========================================
+
+### TEST 4: PRUEBA DE SOBREVENTA (Esperamos 409 Conflict)
+# Objetivo: Intentar restar más stock del que existe.
+# El sistema debe detenernos con StockInsufficientException.
+PATCH http://localhost:8080/api/products/324/stock?quantity=999999
+
+### TEST 5: VENTA EXITOSA (Esperamos 200 OK)
+# Objetivo: Restar una cantidad válida.
+# El stock debe bajar en 1.
+PATCH http://localhost:8080/api/products/324/stock?quantity=1
+
+### TEST 6: VALIDACIÓN DE CANTIDAD (Esperamos 400 Bad Request)
+# Objetivo: Verificar que Positive sigue funcionando en el Controller.
+PATCH http://localhost:8080/api/products/324/stock?quantity=-5

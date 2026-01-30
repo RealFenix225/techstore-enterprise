@@ -98,6 +98,16 @@ public class ProductController {
         return ResponseEntity.ok("File uploaded successfully");
     }
 
+    // 8. REDUCIR STOCK (Simular Venta)
+    // PATCH /api/products/1/stock?quantity=5
+    @PatchMapping("/{id}/stock")
+    public ResponseEntity<ProductDto> reduceStock(
+            @PathVariable Long id,
+            @RequestParam @Positive(message = "Quantity must be positive") Integer quantity
+    ) {
+        return ResponseEntity.ok(productService.reduceStock(id, quantity));
+    }
+
     // --- ENDPOINTS DE BUSQUEDA AVANZADA ---
 
     // 1. GET /api/products/search/low-stock?limit=10

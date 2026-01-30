@@ -14,7 +14,6 @@ public interface ProductService {
 
     ProductDto getProductById(Long id);
 
-    // Este es tu buscador paginado actual
     Page<ProductDto> searchProducts(String query, Pageable pageable);
 
     ProductDto createProduct(ProductDto productDto);
@@ -23,11 +22,14 @@ public interface ProductService {
 
     void deleteProduct(Long id);
 
-    // --- NUEVOS MÉTODOS DE INTELIGENCIA (DÍA 5) ---
-    // Sin paginación, para alertas rápidas y filtros
+    // --- MÉTODOS DE BÚSQUEDA AVANZADA ---
     List<ProductDto> getProductsLowStock(Integer stockLimit);
 
     List<ProductDto> getProductsByMinPrice(BigDecimal minPrice);
 
     List<ProductDto> searchProductsByTerm(String term);
+
+    // --- NUEVO MÉTODO DÍA 3 (31/01): LÓGICA TRANSACCIONAL ---
+    // Este método lanzará StockInsufficientException si falla la regla de negocio.
+    ProductDto reduceStock(Long id, Integer quantity);
 }

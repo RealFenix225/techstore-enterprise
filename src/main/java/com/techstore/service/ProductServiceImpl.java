@@ -2,6 +2,7 @@ package com.techstore.service;
 
 import com.techstore.dto.ProductDto;
 import com.techstore.exception.ResourceNotFoundException;
+import com.techstore.exception.StockInsufficientException; // <--- IMPORTANTE: NUEVA EXCEPCIÓN (31/01)
 import com.techstore.mapper.ProductMapper;
 import com.techstore.model.Category;
 import com.techstore.model.Product;
@@ -9,6 +10,7 @@ import com.techstore.model.Provider;
 import com.techstore.repository.CategoryRepository;
 import com.techstore.repository.ProductRepository;
 import com.techstore.repository.ProviderRepository;
+import com.techstore.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -52,8 +54,7 @@ public class ProductServiceImpl implements ProductService {
                 .map(productMapper::toDto);
     }
 
-    // --- INTELIGENCIA DE NEGOCIO (NUEVO - DÍA 5) ---
-    // Usamos tu ProductMapper aquí también para mantener consistencia
+    // --- INTELIGENCIA DE NEGOCIO Y BÚSQUEDAS ---
 
     @Override
     @Transactional(readOnly = true)
@@ -74,9 +75,38 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional(readOnly = true)
     public List<ProductDto> searchProductsByTerm(String term) {
-        return productRepository.searchByTerm(term).stream() // Usa el JPQL del Repo
+        return productRepository.searchByTerm(term).stream()
                 .map(productMapper::toDto)
                 .collect(Collectors.toList());
+    }
+
+    // --- OPERACIÓN TÁCTICA DEL DÍA 3: CONTROL DE STOCK ---
+
+    @Override
+    @Transactional // <--- TRANSACCIÓN DE ESCRITURA (ACID)
+    public ProductDto reduceStock(Long id, Integer quantity) {
+        // 1. Buscar producto (Reutilizamos lógica de excepción existente)
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", "id", id));
+
+        // 2. VALIDACIÓN DE REGLA DE NEGOCIO (El Corazón del sistema)
+        if (product.getStock() < quantity) {
+            // Esto lanza la excepción personalizada creada hoy (31/01)
+            throw new StockInsufficientException(
+                    "Not enough stock for product ID: " + id +
+                            ". Available: " + product.getStock() +
+                            ", Requested: " + quantity
+            );
+        }
+
+        // 3. Modificación del Estado
+        product.setStock(product.getStock() - quantity);
+
+        // 4. Guardado (Explícito para claridad)
+        Product savedProduct = productRepository.save(product);
+
+        // 5. Retorno mapeado
+        return productMapper.toDto(savedProduct);
     }
 
     // --- ESCRITURA (CREATE) ---
@@ -102,13 +132,13 @@ public class ProductServiceImpl implements ProductService {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "id", id));
 
-        // Esto actualiza campos básicos
+        // Actualiza campos básicos
         product.setName(productDto.getName());
         product.setDescription(productDto.getDescription());
         product.setPrice(productDto.getPrice());
         product.setStock(productDto.getStock());
 
-        // Esto actualiza relaciones solo si cambiaron
+        // Actualiza relaciones solo si cambiaron
         if (!product.getCategory().getId().equals(productDto.getCategoryId())) {
             product.setCategory(getCategoryOrThrow(productDto.getCategoryId()));
         }
@@ -131,7 +161,7 @@ public class ProductServiceImpl implements ProductService {
         productRepository.deleteById(id);
     }
 
-    // --- MÉTODOS AUXILIARES (Privados) ---
+    // --- MÉTODOS AUXILIARES ---
 
     private Category getCategoryOrThrow(Long id) {
         return categoryRepository.findById(id)
