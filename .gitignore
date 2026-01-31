@@ -32,7 +32,14 @@ build/
 ### VS Code ###
 .vscode/
 
-### SEGURIDAD - NO SUBIR NUNCA ###
+### SEGURIDAD CRÍTICA - ORACLE CLOUD ###
+# Bloquea la carpeta especifica donde la tienes ahora
+src/main/resources/wallet/
+
+# Bloquea cualquier carpeta que se llame wallet en cualquier lugar
+**/wallet/
+
+# Bloquea los archivos por extensión (Doble seguridad)
 Wallet_*/
 cwallet.sso
 ewallet.p12
