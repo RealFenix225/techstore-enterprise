@@ -2,6 +2,19 @@
 ### DÍA 3: PRUEBAS DE LÓGICA DE NEGOCIO
 ### ==========================================
 
+### TEST 3: CREAR PRODUCTO (Happy Path)
+POST http://localhost:8080/api/products
+Content-Type: application/json
+
+{
+  "name": "Lenovo Legion 5 Pro",
+  "description": "Gaming laptop with RTX 3070",
+  "price": 1400.00,
+  "stock": 15,
+  "categoryId": 1,
+  "providerId": 1
+}
+
 ### TEST 4: PRUEBA DE SOBREVENTA (Esperamos 409 Conflict)
 # Objetivo: Intentar restar más stock del que existe.
 # El sistema debe detenernos con StockInsufficientException.
