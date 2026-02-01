@@ -1,6 +1,7 @@
 package com.techstore.service;
 
 import com.techstore.dto.ProductDto;
+import com.techstore.dto.ProductResponseDto;
 import com.techstore.exception.ResourceNotFoundException;
 import com.techstore.exception.StockInsufficientException; // <--- IMPORTANTE: NUEVA EXCEPCIÓN (31/01)
 import com.techstore.mapper.ProductMapper;
@@ -10,10 +11,12 @@ import com.techstore.model.Provider;
 import com.techstore.repository.CategoryRepository;
 import com.techstore.repository.ProductRepository;
 import com.techstore.repository.ProviderRepository;
+import com.techstore.repository.spec.ProductSpecifications;
 import com.techstore.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -171,5 +174,46 @@ public class ProductServiceImpl implements ProductService {
     private Provider getProviderOrThrow(Long id) {
         return providerRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Provider", "id", id));
+    }
+
+    // Método auxiliar para convertir Entidad -> DTO
+    private ProductResponseDto convertToResponseDTO(Product product) {
+        ProductResponseDto dto = new ProductResponseDto();
+        dto.setId(product.getId());
+        dto.setName(product.getName());
+        dto.setDescription(product.getDescription());
+        dto.setPrice(product.getPrice());
+        dto.setStock(product.getStock());
+        dto.setCreatedAt(product.getCreatedAt());
+        dto.setUpdatedAt(product.getUpdatedAt());
+
+        // Manejo seguro de relaciones (para evitar NullPointerException)
+        if (product.getCategory() != null) {
+            dto.setCategoryId(product.getCategory().getId());
+            dto.setCategoryName(product.getCategory().getName());
+        }
+
+        if (product.getProvider() != null) {
+            dto.setProviderId(product.getProvider().getId());
+            dto.setProviderName(product.getProvider().getName());
+        }
+
+        return dto;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ProductResponseDto> searchProducts(String name, BigDecimal minPrice, BigDecimal maxPrice, String category, Pageable pageable) {
+
+        Specification<Product> spec = Specification.where(ProductSpecifications.hasName(name))
+                .and(ProductSpecifications.hasMinPrice(minPrice))
+                .and(ProductSpecifications.hasMaxPrice(maxPrice))
+                .and(ProductSpecifications.hasCategory(category));
+
+        // MAGIA: findAll acepta (spec, pageable) automáticamente
+        Page<Product> productPage = productRepository.findAll(spec, pageable);
+
+        // Convertimos la página de Entidades a página de DTOs
+        return productPage.map(this::convertToResponseDTO);
     }
 }

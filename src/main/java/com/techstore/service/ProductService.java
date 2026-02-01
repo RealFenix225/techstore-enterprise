@@ -1,6 +1,7 @@
 package com.techstore.service;
 
 import com.techstore.dto.ProductDto;
+import com.techstore.dto.ProductResponseDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -32,4 +33,7 @@ public interface ProductService {
     // --- NUEVO MÉTODO DÍA 3 (31/01): LÓGICA TRANSACCIONAL ---
     // Este método lanzará StockInsufficientException si falla la regla de negocio.
     ProductDto reduceStock(Long id, Integer quantity);
+
+    //método de búsqueda avanzada ingresada el 01/02
+    Page<ProductResponseDto> searchProducts(String name, BigDecimal minPrice, BigDecimal maxPrice, String category, Pageable pageable);
 }

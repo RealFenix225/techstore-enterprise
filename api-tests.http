@@ -28,3 +28,44 @@ PATCH http://localhost:8080/api/products/324/stock?quantity=1
 ### TEST 6: VALIDACIÓN DE CANTIDAD (Esperamos 400 Bad Request)
 # Objetivo: Verificar que Positive sigue funcionando en el Controller.
 PATCH http://localhost:8080/api/products/324/stock?quantity=-5
+
+
+### TEST DE INTEGRACIÓN: VENTA + TRAZABILIDAD
+# 1. Reducimos stock (Lógica)
+# 2. Esperamos un header X-Correlation-Id (Observabilidad)
+PATCH http://localhost:8080/api/products/501/stock?quantity=1
+
+
+###Búsquedas del 01/02
+### BÚSQUEDA AVANZADA 1: Por nombre parcial (Debería traer Lenovo)
+GET http://localhost:8080/api/products/filter?name=Lenovo
+
+### BÚSQUEDA AVANZADA 2: Filtros combinados (Precio + Categoría)
+GET http://localhost:8080/api/products/filter?minPrice=100&maxPrice=2000&category=Electronics
+
+### BÚSQUEDA AVANZADA 3: Sin filtros (Trae todo)
+GET http://localhost:8080/api/products/filter
+
+### BÚSQUEDA AVANZADA PAGINADA
+GET http://localhost:8080/api/products/filter?category=Electronics&page=0&size=2
+
+
+
+### TEST ERROR 1: Validación (Precio negativo)
+# Debería devolver 400 Bad Request con detalles del campo "price"
+POST http://localhost:8080/api/products
+Content-Type: application/json
+
+{
+  "name": "Error Product",
+  "description": "Testing validation",
+  "price": -50.00,
+  "stock": 10,
+  "categoryId": 1,
+  "providerId": 1
+}
+
+### TEST ERROR 2: Negocio (Stock Insuficiente)
+# Intenta comprar más de lo que hay (ej. 1000 unidades del prod 501)
+# Debería devolver 409 Conflict y el mensaje de error limpio
+PATCH http://localhost:8080/api/products/501/stock?quantity=10000

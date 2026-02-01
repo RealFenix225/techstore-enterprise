@@ -130,4 +130,17 @@ public class ProductController {
             @RequestParam @NotBlank(message = "Search term cannot be empty") String term) { // BLINDAJE: No vacío
         return ResponseEntity.ok(productService.searchProductsByTerm(term));
     }
+
+    //Agregado el 01/02
+    @GetMapping("/filter")
+    public ResponseEntity<Page<com.techstore.dto.ProductResponseDto>> filterProducts(
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(required = false) String category,
+            @PageableDefault(size = 10) Pageable pageable) { // <--- Paginación automática (01/02)
+
+        Page<com.techstore.dto.ProductResponseDto> results = productService.searchProducts(name, minPrice, maxPrice, category, pageable);
+        return ResponseEntity.ok(results);
+    }
 }

@@ -18,6 +18,7 @@ import java.util.List;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ApiError {
 
+    private String correlationId;
     private LocalDateTime timestamp;    // Fecha y hora del error
     private Integer status;             // Código HTTP (400, 404, 500)
     private String error;               // Nombre del error (e.g. "Bad Request")
