@@ -69,3 +69,6 @@ Content-Type: application/json
 # Intenta comprar más de lo que hay (ej. 1000 unidades del prod 501)
 # Debería devolver 409 Conflict y el mensaje de error limpio
 PATCH http://localhost:8080/api/products/501/stock?quantity=10000
+
+### TEST para SPRING SECURITY (02/02)
+GET http://localhost:8080/api/products
