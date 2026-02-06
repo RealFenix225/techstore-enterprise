@@ -89,3 +89,67 @@ Content-Type: application/json
   "email": "general@techstore.com",
   "password": "password123"
 }
+
+### =================================================================
+### Objetivo: Comprobar que cualquiera puede VER sin token.
+### =================================================================
+GET http://localhost:8080/api/products
+Content-Type: application/json
+
+# 🟢 ESPERADO: 200 OK (Lista de productos)
+
+
+### =================================================================
+### ESCENARIO 2:o Norma RECLUTAMIENTO (Crear Usuaril)
+### Objetivo: Crear un soldado raso (USER) para probar que NO tiene poder.
+### =================================================================
+POST http://localhost:8080/api/auth/register
+Content-Type: application/json
+
+{
+  "firstname": "Pepe",
+  "lastname": "Soldado",
+  "email": "pepe@user.com",
+  "password": "user123",
+  "role": "USER"
+}
+
+# 🟢 ESPERADO: 200 OK + Token (Copia este token para el paso 3)
+
+
+### =================================================================
+### 🧪 ESCENARIO 3: EL INTRUSO (Usuario Normal intenta Borrar)
+### Objetivo: Intentar borrar un producto siendo solo USER.
+### =================================================================
+# ⚠️ REEMPLAZA EL TOKEN ABAJO CON EL DE PEPE
+DELETE http://localhost:8080/api/products/1
+Authorization: Bearer PEGA_AQUI_EL_TOKEN_DE_PEPE
+
+# 🔴 ESPERADO: 403 FORBIDDEN (¡Acceso Denegado! El sistema funciona)
+
+
+### =================================================================
+### 🧪 ESCENARIO 4: AUTENTICACIÓN DEL GENERAL (Login Admin)
+### Objetivo: Obtener el token del Jefe Supremo.
+### =================================================================
+POST http://localhost:8080/api/auth/authenticate
+Content-Type: application/json
+
+{
+  "email": "general@techstore.com",
+  "password": "password123"
+}
+
+# 🟢 ESPERADO: 200 OK + Token (Copia este token para el paso 5)
+
+
+### =================================================================
+### 🧪 ESCENARIO 5: EL COMANDANTE (Admin Borra Producto)
+### Objetivo: Demostrar que el ADMIN sí tiene permiso.
+### =================================================================
+# ⚠️ REEMPLAZA EL TOKEN ABAJO CON EL DEL GENERAL
+# Asegúrate de usar un ID que exista (mira la lista del paso 1)
+DELETE http://localhost:8080/api/products/274
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJnZW5lcmFsQHRlY2hzdG9yZS5jb20iLCJpYXQiOjE3NzA0MDE1NzIsImV4cCI6MTc3MDQ4Nzk3Mn0._rgun91oL5PcSh2e8xIG7xTbUNrDaL_q6587n9GUINU
+
+# 🟢 ESPERADO: 204 NO CONTENT (Producto eliminado) o 200 OK
