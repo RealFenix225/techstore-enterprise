@@ -30,10 +30,15 @@ public class ApplicationConfig {
     //2. El proveedor que verifica la identidad (Logic de Login)
     @Bean
     public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authenticationProvider = new DaoAuthenticationProvider();
-        authenticationProvider.setUserDetailsService(userDetailsService());
-        authenticationProvider.setUserDetailsService(userDetailsService());
-        return authenticationProvider;
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+
+        // 1. Decirle quién busca los usuarios
+        authProvider.setUserDetailsService(userDetailsService());
+
+        // 2. Decirle quién descifra las contraseñas <--- ¡ESTO FALTABA!
+        authProvider.setPasswordEncoder(passwordEncoder());
+
+        return authProvider;
     }
 
     //3. El manejador global de autenticación

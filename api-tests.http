@@ -77,3 +77,15 @@ GET http://localhost:8080/api/products
 GET http://localhost:8080/api/products
 Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJnZW5lcmFsQHRlY2hzdG9yZS5jb20iLCJpYXQiOjE3NzA0MDE1NzIsImV4cCI6MTc3MDQ4Nzk3Mn0._rgun91oL5PcSh2e8xIG7xTbUNrDaL_q6587n9GUINU
 Content-Type: application/json
+
+###Prueba 06/02
+POST http://localhost:8080/api/auth/authenticate
+
+###Nueva petición 06/02
+POST http://localhost:8080/api/auth/authenticate
+Content-Type: application/json
+
+{
+  "email": "general@techstore.com",
+  "password": "password123"
+}

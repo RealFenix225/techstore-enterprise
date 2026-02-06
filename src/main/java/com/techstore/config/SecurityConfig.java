@@ -24,14 +24,17 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        // Mañana abriremos el login aquí. Hoy, todo cerrado.
-                        .anyRequest().authenticated()
+// PERMITIR ACCESO PUBLICO A LOS ENDPOINTS DE AUTH
+                                .requestMatchers("/api/auth/**").permitAll()
+                                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**").permitAll() // De paso abrimos Swagger
+                                // EL RESTO REQUIERE AUTENTICACION
+                                .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authenticationProvider(authenticationProvider)
-                // IMPONER NUESTRO FILTRO ANTES QUE EL DE SPRING
+
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
