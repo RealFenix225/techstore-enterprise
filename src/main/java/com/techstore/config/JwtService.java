@@ -55,7 +55,7 @@ public class JwtService {
 
     private Claims extractAllClaims(String token) {
         return Jwts.parserBuilder()
-                .setSigningKey(getSignInKey()) //Usamos la misma llave para abrir la
+                .setSigningKey(getSignInKey())
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
@@ -75,5 +75,11 @@ public class JwtService {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
+    // 4. VALIDAR TOKEN (Implementado el 06/02)
+    public boolean isTokenValid(String token, UserDetails userDetails) {
+        final String username = extractUsername(token);
+        // El token es válido si el usuario coincide Y no ha expirado
+        return (username.equals(userDetails.getUsername())) && !isTokenExpired(token);
+    }
 
-}
+    }

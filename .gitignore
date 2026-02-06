@@ -47,3 +47,7 @@ keystore.jks
 *.p12
 *.key
 *.sso
+
+# Ignorar archivos de pruebas HTTP (contienen tokens)
+*.http
+**/*.http

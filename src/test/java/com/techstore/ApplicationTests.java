@@ -35,5 +35,4 @@ class ApplicationTests {
         System.out.println(token);
         System.out.println("-----------------------------------------------------------");
     }
-
 }

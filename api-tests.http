@@ -72,3 +72,8 @@ PATCH http://localhost:8080/api/products/501/stock?quantity=10000
 
 ### TEST para SPRING SECURITY (02/02)
 GET http://localhost:8080/api/products
+
+### PRUEBA DE SEGURIDAD: Listar Productos (Debe dar 200 OK) (06/02)
+GET http://localhost:8080/api/products
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJnZW5lcmFsQHRlY2hzdG9yZS5jb20iLCJpYXQiOjE3NzA0MDE1NzIsImV4cCI6MTc3MDQ4Nzk3Mn0._rgun91oL5PcSh2e8xIG7xTbUNrDaL_q6587n9GUINU
+Content-Type: application/json
