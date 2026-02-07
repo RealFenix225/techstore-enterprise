@@ -22,7 +22,7 @@ public class ProductMapper {
                 .categoryName(entity.getCategory() != null ? entity.getCategory().getName(): "Sin Categoría")
                 .providerName(entity.getProvider() != null ? entity.getProvider().getName() : "Sin Proveedor")
 
-                // --- RELACIONES (IDS PARA LA LÓGICA) - ¡ESTO FALTABA! ---
+                // --- RELACIONES (IDS PARA LA LÓGICA) - ¡ESTO ME FALTABA! ---
                 .categoryId(entity.getCategory() != null ? entity.getCategory().getId() : null)
                 .providerId(entity.getProvider() != null ? entity.getProvider().getId() : null)
 
@@ -41,7 +41,7 @@ public class ProductMapper {
                 .description(dto.getDescription())
                 .price(dto.getPrice())
                 .stock(dto.getStock())
-                // NOTA: No mapeamos category/provider aquí.
+                // NOTA: No mapep category/provider aquí.
                 // Eso lo hace el ProductService buscando los IDs reales en la BD.
                 .build();
     }
