@@ -3,7 +3,7 @@ package com.techstore.service;
 import com.techstore.dto.ProductDto;
 import com.techstore.dto.ProductResponseDto;
 import com.techstore.exception.ResourceNotFoundException;
-import com.techstore.exception.StockInsufficientException; // <--- IMPORTANTE: NUEVA EXCEPCIÓN (31/01)
+import com.techstore.exception.StockInsufficientException;
 import com.techstore.mapper.ProductMapper;
 import com.techstore.model.Category;
 import com.techstore.model.Product;
@@ -12,7 +12,6 @@ import com.techstore.repository.CategoryRepository;
 import com.techstore.repository.ProductRepository;
 import com.techstore.repository.ProviderRepository;
 import com.techstore.repository.spec.ProductSpecifications;
-import com.techstore.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -22,11 +21,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class ProductServiceImpl implements ProductService {
+
+    private static final String ENTITY_NAME = "Product";
 
     private final ProductRepository productRepository;
     private final ProductMapper productMapper;
@@ -46,7 +46,7 @@ public class ProductServiceImpl implements ProductService {
     @Transactional(readOnly = true)
     public ProductDto getProductById(Long id) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Product", "id", id));
+                .orElseThrow(() -> new ResourceNotFoundException(ENTITY_NAME, "id", id));
         return productMapper.toDto(product);
     }
 
@@ -64,7 +64,7 @@ public class ProductServiceImpl implements ProductService {
     public List<ProductDto> getProductsLowStock(Integer stockLimit) {
         return productRepository.findByStockLessThan(stockLimit).stream()
                 .map(productMapper::toDto)
-                .collect(Collectors.toList());
+                .toList(); // JAVA 17: Mucho más limpio que collect(Collectors.toList())
     }
 
     @Override
@@ -72,7 +72,7 @@ public class ProductServiceImpl implements ProductService {
     public List<ProductDto> getProductsByMinPrice(BigDecimal minPrice) {
         return productRepository.findByPriceGreaterThanEqual(minPrice).stream()
                 .map(productMapper::toDto)
-                .collect(Collectors.toList());
+                .toList(); // JAVA 17 CLEAN CODE
     }
 
     @Override
@@ -80,7 +80,7 @@ public class ProductServiceImpl implements ProductService {
     public List<ProductDto> searchProductsByTerm(String term) {
         return productRepository.searchByTerm(term).stream()
                 .map(productMapper::toDto)
-                .collect(Collectors.toList());
+                .toList(); // JAVA 17 CLEAN CODE
     }
 
     // --- OPERACIÓN TÁCTICA DEL DÍA 3: CONTROL DE STOCK ---
@@ -88,13 +88,12 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional // <--- TRANSACCIÓN DE ESCRITURA (ACID)
     public ProductDto reduceStock(Long id, Integer quantity) {
-        // 1. Buscar producto (Reutilizamos lógica de excepción existente)
+        // 1. Buscar producto
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Product", "id", id));
+                .orElseThrow(() -> new ResourceNotFoundException(ENTITY_NAME, "id", id));
 
-        // 2. VALIDACIÓN DE REGLA DE NEGOCIO (El Corazón del sistema)
+        // 2. VALIDACIÓN DE REGLA DE NEGOCIO
         if (product.getStock() < quantity) {
-            // Esto lanza la excepción personalizada creada hoy (31/01)
             throw new StockInsufficientException(
                     "Not enough stock for product ID: " + id +
                             ". Available: " + product.getStock() +
@@ -105,7 +104,7 @@ public class ProductServiceImpl implements ProductService {
         // 3. Modificación del Estado
         product.setStock(product.getStock() - quantity);
 
-        // 4. Guardado (Explícito para claridad)
+        // 4. Guardado
         Product savedProduct = productRepository.save(product);
 
         // 5. Retorno mapeado
@@ -133,7 +132,7 @@ public class ProductServiceImpl implements ProductService {
     @Transactional
     public ProductDto updateProduct(Long id, ProductDto productDto) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Product", "id", id));
+                .orElseThrow(() -> new ResourceNotFoundException(ENTITY_NAME, "id", id));
 
         // Actualiza campos básicos
         product.setName(productDto.getName());
@@ -142,7 +141,7 @@ public class ProductServiceImpl implements ProductService {
         product.setStock(productDto.getStock());
 
         // Actualiza relaciones solo si cambiaron
-        if (!product.getCategory().getId().equals(productDto.getCategoryId())) {
+        if (product.getCategory() == null || !product.getCategory().getId().equals(productDto.getCategoryId())) {
             product.setCategory(getCategoryOrThrow(productDto.getCategoryId()));
         }
 
@@ -159,7 +158,7 @@ public class ProductServiceImpl implements ProductService {
     @Transactional
     public void deleteProduct(Long id) {
         if (!productRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Product", "id", id);
+            throw new ResourceNotFoundException(ENTITY_NAME, "id", id);
         }
         productRepository.deleteById(id);
     }
@@ -176,7 +175,7 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("Provider", "id", id));
     }
 
-    // Método auxiliar para convertir Entidad -> DTO
+    // Método auxiliar para convertir Entidad -> DTO de respuesta avanzada
     private ProductResponseDto convertToResponseDTO(Product product) {
         ProductResponseDto dto = new ProductResponseDto();
         dto.setId(product.getId());
@@ -187,7 +186,7 @@ public class ProductServiceImpl implements ProductService {
         dto.setCreatedAt(product.getCreatedAt());
         dto.setUpdatedAt(product.getUpdatedAt());
 
-        // Manejo seguro de relaciones (para evitar NullPointerException)
+        // Manejo seguro de relaciones
         if (product.getCategory() != null) {
             dto.setCategoryId(product.getCategory().getId());
             dto.setCategoryName(product.getCategory().getName());
@@ -210,10 +209,8 @@ public class ProductServiceImpl implements ProductService {
                 .and(ProductSpecifications.hasMaxPrice(maxPrice))
                 .and(ProductSpecifications.hasCategory(category));
 
-        // MAGIA: findAll acepta (spec, pageable) automáticamente
         Page<Product> productPage = productRepository.findAll(spec, pageable);
 
-        // Convertimos la página de Entidades a página de DTOs
         return productPage.map(this::convertToResponseDTO);
     }
 }

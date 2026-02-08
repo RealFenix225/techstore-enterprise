@@ -3,7 +3,7 @@ package com.techstore.exception;
 import com.techstore.dto.ApiError;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
-import org.slf4j.MDC; // <--- IMPORTANTE: Importar esto
+import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;

@@ -44,7 +44,7 @@ public class ApplicationConfig {
     //3. El manejador global de autenticación
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-      return config.getAuthenticationManager();
+        return config.getAuthenticationManager();
     }
 
     //4. El encriptador de contraseñas (BCrypt es el estándar industrial)

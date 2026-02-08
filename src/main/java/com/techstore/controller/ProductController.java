@@ -1,8 +1,13 @@
 package com.techstore.controller;
 
 import com.techstore.dto.ProductDto;
+import com.techstore.dto.ProductResponseDto;
 import com.techstore.service.ProductImportService;
 import com.techstore.service.ProductService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -23,128 +28,124 @@ import java.math.BigDecimal;
 import java.net.URI;
 import java.util.List;
 
+/**
+ * Controller para la gestión de productos en TechStore Enterprise.
+ * Implementa estándares de documentación OpenAPI y blindaje de seguridad.
+ */
 @RestController
 @RequestMapping("/api/products")
 @RequiredArgsConstructor
-@Validated // <--- EL ESCUDO: Activa validaciones en parámetros simples (query params, path variables)
+@Validated
+@Tag(name = "Product Management", description = "Operaciones relacionadas con el catálogo e inventario de productos")
 public class ProductController {
 
     private final ProductService productService;
     private final ProductImportService productImportService;
 
-    // 1. OBTENER TODOS (Paginado)
-    // GET /api/products?page=0&size=10
+    @Operation(summary = "Listar productos", description = "Obtiene una página de productos con soporte para ordenación dinámica.")
     @GetMapping
     public ResponseEntity<Page<ProductDto>> getAllProducts(
             @PageableDefault(size = 10) Pageable pageable) {
-
-        Page<ProductDto> products = productService.getAllProducts(pageable);
-        return ResponseEntity.ok(products);
+        return ResponseEntity.ok(productService.getAllProducts(pageable));
     }
 
-    // 2. OBTENER POR ID
-    // GET /api/products/1
+    @Operation(summary = "Obtener por ID", description = "Busca un producto específico mediante su identificador único.")
+    @ApiResponse(responseCode = "200", description = "Producto encontrado")
+    @ApiResponse(responseCode = "404", description = "Producto no existe")
     @GetMapping("/{id}")
     public ResponseEntity<ProductDto> getProductById(
-            @PathVariable @Positive(message = "ID must be positive") Long id) { // BLINDAJE: ID positivo
+            @PathVariable @Positive(message = "ID must be positive") Long id) {
         return ResponseEntity.ok(productService.getProductById(id));
     }
 
-    // 3. BUSCAR POR NOMBRE
-    // GET /api/products/search?query=Laptop
+    @Operation(summary = "Búsqueda simple", description = "Filtra productos que contengan el nombre proporcionado.")
     @GetMapping("/search")
     public ResponseEntity<Page<ProductDto>> searchProducts(
-            @RequestParam @NotBlank(message = "Query cannot be empty") String query, // BLINDAJE: No vacío
+            @RequestParam @NotBlank(message = "Query cannot be empty") String query,
             @PageableDefault(size = 10) Pageable pageable) {
         return ResponseEntity.ok(productService.searchProducts(query, pageable));
     }
 
-    // 4. CREAR (POST)
+    @Operation(summary = "Registrar producto", description = "Crea un nuevo producto en el sistema. Requiere privilegios de ADMIN.")
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponse(responseCode = "201", description = "Producto creado con éxito")
+    @ApiResponse(responseCode = "403", description = "Acceso denegado - Se requiere rol ADMIN")
     @PostMapping
     @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<ProductDto> createProduct(
-            @Valid @RequestBody ProductDto productDto, // BLINDAJE: Valida el JSON completo contra el DTO
+            @Valid @RequestBody ProductDto productDto,
             UriComponentsBuilder uriBuilder) {
-
         ProductDto createdProduct = productService.createProduct(productDto);
-
-        URI location = uriBuilder
-                .path("/api/products/{id}")
-                .buildAndExpand(createdProduct.getId())
-                .toUri();
-
+        URI location = uriBuilder.path("/api/products/{id}").buildAndExpand(createdProduct.getId()).toUri();
         return ResponseEntity.created(location).body(createdProduct);
     }
 
-    // 5. ACTUALIZAR (PUT)
+    @Operation(summary = "Actualizar producto", description = "Modifica los datos de un producto existente. Requiere privilegios de ADMIN.")
+    @SecurityRequirement(name = "bearerAuth")
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<ProductDto> updateProduct(
-            @PathVariable @Positive(message = "ID must be positive") Long id, // BLINDAJE
-            @Valid @RequestBody ProductDto productDto // BLINDAJE
-    ) {
+            @PathVariable @Positive(message = "ID must be positive") Long id,
+            @Valid @RequestBody ProductDto productDto) {
         return ResponseEntity.ok(productService.updateProduct(id, productDto));
     }
 
-    // 6. ELIMINAR (DELETE)
+    @Operation(summary = "Eliminar producto", description = "Borra permanentemente un producto del catálogo. Requiere privilegios de ADMIN.")
+    @SecurityRequirement(name = "bearerAuth")
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<Void> deleteProduct(
-            @PathVariable @Positive(message = "ID must be positive") Long id) { // BLINDAJE
+            @PathVariable @Positive(message = "ID must be positive") Long id) {
         productService.deleteProduct(id);
         return ResponseEntity.noContent().build();
     }
 
-    // 7. IMPORTAR PRODUCTOS
+    @Operation(summary = "Carga masiva (Excel)", description = "Importa productos desde un archivo Excel (.xlsx).")
+    @SecurityRequirement(name = "bearerAuth")
     @PostMapping(value = "/upload", consumes = {"multipart/form-data"})
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<String> uploadProducts(@RequestParam("file") MultipartFile file) throws IOException {
         productImportService.importProducts(file);
         return ResponseEntity.ok("File uploaded successfully");
     }
 
-    // 8. REDUCIR STOCK (Simular Venta)
-    // PATCH /api/products/1/stock?quantity=5
+    @Operation(summary = "Gestionar Stock", description = "Reduce el stock de un producto tras una venta.")
     @PatchMapping("/{id}/stock")
     public ResponseEntity<ProductDto> reduceStock(
             @PathVariable Long id,
-            @RequestParam @Positive(message = "Quantity must be positive") Integer quantity
-    ) {
+            @RequestParam @Positive(message = "Quantity must be positive") Integer quantity) {
         return ResponseEntity.ok(productService.reduceStock(id, quantity));
     }
 
-    // --- ENDPOINTS DE BUSQUEDA AVANZADA ---
-
-    // 1. GET /api/products/search/low-stock?limit=10
+    @Operation(summary = "Alertas de Stock Bajo", description = "Lista productos con existencias por debajo del límite especificado.")
     @GetMapping("/search/low-stock")
     public ResponseEntity<List<ProductDto>> getLowStock(
-            @RequestParam @Min(value = 1, message = "Limit must be at least 1") Integer limit) { // BLINDAJE: Mínimo 1
+            @RequestParam @Min(value = 1, message = "Limit must be at least 1") Integer limit) {
         return ResponseEntity.ok(productService.getProductsLowStock(limit));
     }
 
-    // 2. GET /api/products/search/expensive?min=1000
+    @Operation(summary = "Productos Premium", description = "Lista productos cuyo precio es mayor al mínimo indicado.")
     @GetMapping("/search/expensive")
     public ResponseEntity<List<ProductDto>> getExpensiveProducts(
-            @RequestParam @Positive(message = "Minimum price must be positive") BigDecimal min) { // BLINDAJE: Positivo
+            @RequestParam @Positive(message = "Minimum price must be positive") BigDecimal min) {
         return ResponseEntity.ok(productService.getProductsByMinPrice(min));
     }
 
-    // 3. GET /api/products/search/quick?term=gamer
+    @Operation(summary = "Búsqueda rápida", description = "Búsqueda optimizada por término general.")
     @GetMapping("/search/quick")
     public ResponseEntity<List<ProductDto>> search(
-            @RequestParam @NotBlank(message = "Search term cannot be empty") String term) { // BLINDAJE: No vacío
+            @RequestParam @NotBlank(message = "Search term cannot be empty") String term) {
         return ResponseEntity.ok(productService.searchProductsByTerm(term));
     }
 
-    //Agregado el 01/02
+    @Operation(summary = "Filtro Avanzado", description = "Búsqueda multicriterio por nombre, rango de precios y categoría.")
     @GetMapping("/filter")
-    public ResponseEntity<Page<com.techstore.dto.ProductResponseDto>> filterProducts(
+    public ResponseEntity<Page<ProductResponseDto>> filterProducts(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
             @RequestParam(required = false) String category,
-            @PageableDefault(size = 10) Pageable pageable) { // <--- Paginación automática (01/02)
-
-        Page<com.techstore.dto.ProductResponseDto> results = productService.searchProducts(name, minPrice, maxPrice, category, pageable);
-        return ResponseEntity.ok(results);
+            @PageableDefault(size = 10) Pageable pageable) {
+        return ResponseEntity.ok(productService.searchProducts(name, minPrice, maxPrice, category, pageable));
     }
 }

@@ -17,6 +17,7 @@ import java.util.List;
 public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpecificationExecutor<Product> {
     @EntityGraph(attributePaths = {"category", "provider"})
     Page<Product> findByNameContainingIgnoreCase(String name, Pageable pageable);
+
     Page<Product> findByPriceBetweenAndCategoryName(BigDecimal min, BigDecimal max, String categoryName, Pageable pageable);
 
     //1. DERIVED QUERY (Magia de Spring)

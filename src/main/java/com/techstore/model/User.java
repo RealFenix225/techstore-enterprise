@@ -43,30 +43,30 @@ public class User implements UserDetails {
     // Estos métodos mdicen a Spring Security como interpretar datos
 
     @Override
-    public Collection<? extends GrantedAuthority> getAuthorities(){
-        if(role == null){
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        if (role == null) {
             return List.of();
         }
         return List.of(new SimpleGrantedAuthority(role.name()));
     }
 
     @Override
-    public String getPassword(){
+    public String getPassword() {
         return password; //Esto le pasa la contraseña cifrada a Spring
     }
 
     @Override
-    public String getUsername(){
+    public String getUsername() {
         return email; //Spring espera un "username", con esto le estamos pasando un email
     }
 
     @Override
-    public boolean isAccountNonExpired(){
+    public boolean isAccountNonExpired() {
         return true; //La cuenta no debe caducar
     }
 
     @Override
-    public boolean isAccountNonLocked(){
+    public boolean isAccountNonLocked() {
         return true; //La cuenta no se bloquea
     }
 

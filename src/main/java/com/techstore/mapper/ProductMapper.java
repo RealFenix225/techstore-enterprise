@@ -8,8 +8,8 @@ import org.springframework.stereotype.Component;
 public class ProductMapper {
 
     // ENTITY -> DTO (Salida: Lo que ve en Postman)
-    public ProductDto toDto(Product entity){
-        if(entity == null) return null;
+    public ProductDto toDto(Product entity) {
+        if (entity == null) return null;
 
         return ProductDto.builder()
                 .id(entity.getId())
@@ -19,7 +19,7 @@ public class ProductMapper {
                 .stock(entity.getStock())
 
                 // --- RELACIONES (INFORMACIÓN VISUAL) ---
-                .categoryName(entity.getCategory() != null ? entity.getCategory().getName(): "Sin Categoría")
+                .categoryName(entity.getCategory() != null ? entity.getCategory().getName() : "Sin Categoría")
                 .providerName(entity.getProvider() != null ? entity.getProvider().getName() : "Sin Proveedor")
 
                 // --- RELACIONES (IDS PARA LA LÓGICA) - ¡ESTO ME FALTABA! ---

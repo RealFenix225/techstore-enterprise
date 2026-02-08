@@ -51,3 +51,6 @@ keystore.jks
 # Ignorar archivos de pruebas HTTP (contienen tokens)
 *.http
 **/*.http
+
+# Ignorar Azure
+.azure/

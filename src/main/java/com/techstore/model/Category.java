@@ -32,12 +32,12 @@ public class Category extends BaseEntity {
     private List<Product> products = new ArrayList<>();
 
     // HELPER METHODS
-    public void addProduct(Product product){
+    public void addProduct(Product product) {
         products.add(product);
         product.setCategory(this);
     }
 
-    public void removeProduct(Product product){
+    public void removeProduct(Product product) {
         products.remove(product);
         product.setCategory(null);
     }

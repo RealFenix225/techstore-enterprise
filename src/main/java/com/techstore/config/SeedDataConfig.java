@@ -1,7 +1,7 @@
 package com.techstore.config;
 
-import com.techstore.model.User;
 import com.techstore.model.Role;
+import com.techstore.model.User;
 import com.techstore.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

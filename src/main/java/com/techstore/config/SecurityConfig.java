@@ -3,7 +3,7 @@ package com.techstore.config;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod; // <--- IMPORTANTE: Necesario para especificar GET
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -29,7 +29,13 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // 1. ZONA PÚBLICA (Autenticación y Documentación)
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        .requestMatchers("/v3/api-docs/**",
+                                        "/swagger-ui/**",
+                                        "/swagger-ui.html").permitAll()
+
+                        // 👇👇👇 AGREGA ESTA LÍNEA AQUÍ 👇👇👇
+                        .requestMatchers("/error").permitAll() // <--- SOLUCIÓN: Deja ver los errores sin pedir login (Temporal 08/02)
+
 
                         // 2. ESCAPARATE PÚBLICO (Cualquiera puede VER productos)
                         // Usamos HttpMethod.GET para asegurar que solo puedan LEER, no borrar ni crear

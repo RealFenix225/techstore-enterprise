@@ -26,12 +26,12 @@ public class JwtService {
     private long jwtExpiration;
 
     //1. GENERAR TOKEN (Solo con usuario)
-    public String generateToken(UserDetails userDetails){
+    public String generateToken(UserDetails userDetails) {
         return generateToken(new HashMap<>(), userDetails);
     }
 
     //2. GENERAR TOKEN (Con claims extra, por si quiero guardar el Rol dentro del token)
-    public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails){
+    public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
         return Jwts.builder()
                 .setClaims(extraClaims)
                 .setSubject(userDetails.getUsername()) //Espacio para el email
@@ -61,15 +61,15 @@ public class JwtService {
                 .getBody();
     }
 
-    private boolean isTokenExpired(String token){
+    private boolean isTokenExpired(String token) {
         return extractExpiration(token).before(new Date());
     }
 
-    private Date extractExpiration(String token){
+    private Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
     }
 
-    private Key getSignInKey(){
+    private Key getSignInKey() {
         //Esto decodifica la clave HEX qeue puse en properties
         byte[] keyBytes = HexFormat.of().parseHex(secretKey);
         return Keys.hmacShaKeyFor(keyBytes);
@@ -82,4 +82,4 @@ public class JwtService {
         return (username.equals(userDetails.getUsername())) && !isTokenExpired(token);
     }
 
-    }
+}
