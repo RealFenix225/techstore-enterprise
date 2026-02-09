@@ -4,6 +4,7 @@ import com.techstore.dto.CategoryDto;
 import com.techstore.service.CategoryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j; // IMPORTANTE
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -14,6 +15,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/categories")
 @RequiredArgsConstructor
+@Slf4j // Habilita el logger
 public class CategoryController {
 
     private final CategoryService categoryService;
@@ -33,6 +35,7 @@ public class CategoryController {
             @Valid @RequestBody CategoryDto categoryDto,
             UriComponentsBuilder uriBuilder) {
 
+        log.info("Creating new category: {}", categoryDto.getName());
         CategoryDto createdCategory = categoryService.createCategory(categoryDto);
 
         URI location = uriBuilder
@@ -46,13 +49,14 @@ public class CategoryController {
     @PutMapping("/{id}")
     public ResponseEntity<CategoryDto> updateCategory(
             @PathVariable Long id,
-
             @Valid @RequestBody CategoryDto categoryDto) {
+        log.info("Updating category ID: {}", id);
         return ResponseEntity.ok(categoryService.updateCategory(id, categoryDto));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteCategory(@PathVariable Long id) {
+        log.warn("Deleting category ID: {}", id);
         categoryService.deleteCategory(id);
         return ResponseEntity.noContent().build();
     }

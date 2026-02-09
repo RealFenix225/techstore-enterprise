@@ -7,6 +7,7 @@ import com.techstore.repository.CategoryRepository;
 import com.techstore.repository.ProductRepository;
 import com.techstore.repository.ProviderRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j; // IMPORTANTE (9/02)
 import org.apache.poi.ss.usermodel.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +20,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j // Habilita el logger profesional
 public class ProductImportService {
 
     private final ProductRepository productRepo;
@@ -27,47 +29,45 @@ public class ProductImportService {
 
     @Transactional
     public void importProducts(MultipartFile file) throws IOException {
-        System.out.println("--- INICIO DE IMPORTACIÓN ---");
-        System.out.println("Archivo recibido: " + file.getOriginalFilename());
-        System.out.println("Tamaño: " + file.getSize() + " bytes");
+        log.info("--- STARTING IMPORT --- File: {} | Size: {} bytes", file.getOriginalFilename(), file.getSize());
 
-        // 1. Cargar Maestros
+        // 1. Cargar Maestros (Validación Crítica)
+        // Logs antes de lanzar la excepción para que quede registrado el error grave
         Category defaultCategory = categoryRepo.findById(1L)
-                .orElseThrow(() -> new RuntimeException("¡ERROR CRÍTICO! No existe la Categoría ID 1 en BBDD"));
+                .orElseThrow(() -> {
+                    log.error("CRITICAL: Default Category (ID 1) not found in DB");
+                    return new RuntimeException("Critical Error: Category ID 1 missing");
+                });
+
         Provider defaultProvider = providerRepo.findById(1L)
-                .orElseThrow(() -> new RuntimeException("¡ERROR CRÍTICO! No existe el Proveedor ID 1 en BBDD"));
+                .orElseThrow(() -> {
+                    log.error("CRITICAL: Default Provider (ID 1) not found in DB");
+                    return new RuntimeException("Critical Error: Provider ID 1 missing");
+                });
 
         List<Product> productsToSave = new ArrayList<>();
         DataFormatter dataFormatter = new DataFormatter();
 
         try (Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
             Sheet sheet = workbook.getSheetAt(0);
-            System.out.println("Leyendo hoja: " + sheet.getSheetName());
-            System.out.println("Total de filas estimadas: " + sheet.getPhysicalNumberOfRows());
+            log.info("Reading Sheet: '{}' with approx {} rows", sheet.getSheetName(), sheet.getPhysicalNumberOfRows());
 
             for (Row row : sheet) {
-                // Esto se salta la cabecera
-                if (row.getRowNum() == 0) {
-                    System.out.println("Saltando cabecera...");
-                    continue;
-                }
-
+                // Saltar cabecera
+                if (row.getRowNum() == 0) continue;
 
                 String name = dataFormatter.formatCellValue(row.getCell(0));
                 String priceStr = dataFormatter.formatCellValue(row.getCell(2));
 
-                // Depuración de fila
-                // System.out.println("Fila " + row.getRowNum() + " leída. Nombre: [" + name + "]");
-
+                // Validación básica
                 if (name == null || name.trim().isEmpty()) {
-                    System.out.println(">>> Fila " + row.getRowNum() + " IGNORADA: Nombre vacío");
+                    log.warn("Row {} ignored: Name is empty", row.getRowNum());
                     continue;
                 }
 
                 try {
-                    BigDecimal price = new BigDecimal(priceStr.replace(",", ".")); // Esto asegura el formato decimal
-                    // int stock = Integer.parseInt(dataFormatter.formatCellValue(row.getCell(3)));
-                    int stock = 10;
+                    BigDecimal price = new BigDecimal(priceStr.replace(",", "."));
+                    int stock = 10; // Valor por defecto temporal
 
                     Product product = Product.builder()
                             .name(name)
@@ -79,21 +79,20 @@ public class ProductImportService {
                             .build();
 
                     productsToSave.add(product);
+
                 } catch (Exception e) {
-                    System.out.println(">>> ERROR en Fila " + row.getRowNum() + ": " + e.getMessage());
-                    e.printStackTrace();
+                    log.error("Error parsing Row {}: {}", row.getRowNum(), e.getMessage());
                 }
             }
         }
 
-        System.out.println("--- RESUMEN ---");
-        System.out.println("Productos detectados válidos: " + productsToSave.size());
+        log.info("--- SUMMARY --- Valid products found: {}", productsToSave.size());
 
         if (!productsToSave.isEmpty()) {
             productRepo.saveAll(productsToSave);
-            System.out.println("¡GUARDADO EXITOSO EN BASE DE DATOS!");
+            log.info("SUCCESS: {} products saved to Database", productsToSave.size());
         } else {
-            System.out.println("¡ALERTA! La lista a guardar está VACÍA.");
+            log.warn("ALERT: Import list is EMPTY. Nothing was saved.");
         }
     }
 }
