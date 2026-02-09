@@ -88,7 +88,7 @@ To run this project locally, you need to configure the following Environment Var
 
 ```bash
 # Clone the repository
-git clone [https://github.com/RealFenix225/techstore-enterprise.git](https://github.com/RealFenix225/techstore-enterprise.git)
+git clone https://github.com/RealFenix225/techstore-enterprise.git
 
 # Build & Run
 mvn spring-boot:run
