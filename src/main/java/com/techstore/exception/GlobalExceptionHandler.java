@@ -26,6 +26,7 @@ public class GlobalExceptionHandler {
     // 1. Handle Generic Exceptions
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleGlobalException(Exception exception, HttpServletRequest request) {
+        exception.printStackTrace();
         ApiError apiError = ApiError.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.value())

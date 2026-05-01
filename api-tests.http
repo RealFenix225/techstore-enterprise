@@ -156,3 +156,13 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJnZW5lcmFsQHRlY2hzdG9yZS5jb
 ###
 
 POST http://localhost:8080/api/products/import
+
+
+### Obtener Token JWT PRUEBA 2 de Mayo del 2026
+POST http://localhost:8080/api/auth/authenticate
+Content-Type: application/json
+
+{
+  "email": "general@techstore.com",
+  "password": "password123"
+}
